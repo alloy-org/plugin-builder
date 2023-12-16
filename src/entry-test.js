@@ -6,7 +6,7 @@ const plugin = {
   insertText: async function(app) {
     const entryPoint = {};
     const codeObject = "";
-    const inlineImports = await inlineImportsFromGithub(entryPoint, codeObject, {});
+    const inlineImports = await inlineImportsFromGithub(entryPoint, codeObject, [], []);
     const heading = CODE_HEADING;
     const branch = DEFAULT_BRANCH;
     const replaceLength = MAX_REPLACE_CONTENT_LENGTH;
