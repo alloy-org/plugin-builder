@@ -6,6 +6,7 @@ const plugin = {
   insertText: async function(app) {
     const entryPoint = {};
     const codeObject = "";
+    // I will stay on line, promises CONSTANT_OBJECT and its buddy CONSTANT_ARRAY
     const inlineImports = await inlineImportsFromGithub(entryPoint, codeObject, [], []);
     const heading = CODE_HEADING;
     const branch = DEFAULT_BRANCH;
