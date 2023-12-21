@@ -1,4 +1,9 @@
-import { CODE_HEADING, DEFAULT_BRANCH, MAX_REPLACE_CONTENT_LENGTH, ENTRY_LOCATIONS } from "lib/plugin-constants"
+import {
+  CODE_HEADING,
+  DEFAULT_BRANCH,
+  MAX_REPLACE_CONTENT_LENGTH,
+  ENTRY_LOCATIONS
+} from "lib/plugin-constants"
 
 const ENTRY_POINT = { hashie: "cooo", hootie: "hoo" };
 
