@@ -128,7 +128,6 @@
             const functionBlock = fileContent.substring(functionStartIndex, functionEndIndex);
             const functionName = functionDeclarationMatch.groups?.functionName || functionDeclarationMatch.groups?.variableName;
             const newFunctionBlock = functionBlock.replace(/export\s+/, "");
-            console.log("Got object block length", newFunctionBlock?.length, "for", functionName);
             result[functionName] = newFunctionBlock;
           }
         }
@@ -266,11 +265,11 @@
         check: async function(app) {
           return !!await this._githubRepoUrl(app, { quietFail: true });
         },
-        run: async function(app) {
+        run: async function(app, stripConsoleDebug = false) {
           this.processingError = false;
           const githubUrl = await this._githubRepoUrl(app);
           if (githubUrl) {
-            await this._syncUrlToNote(app, githubUrl);
+            await this._syncUrlToNote(app, githubUrl, stripConsoleDebug);
           } else {
             await app.alert(`Could not find a line beginning in "repo:" or "entry:" in the note.`);
           }
@@ -298,10 +297,20 @@
           const boundRun = this.insertText["Refresh"].run.bind(this);
           return await boundRun(app);
         }
+      },
+      "Refresh w/o console.debug": {
+        check: async function(app) {
+          const boundCheck = this.insertText["Refresh"].check.bind(this);
+          return await boundCheck(app);
+        },
+        run: async function(app) {
+          const boundRun = this.insertText["Refresh"].run.bind(this);
+          return await boundRun(app, true);
+        }
       }
     },
     //----------------------------------------------------------------------
-    async _syncUrlToNote(app, repoUrl) {
+    async _syncUrlToNote(app, repoUrl, stripConsoleDebug = false) {
       const entryPoint = await this._entryPointFromUrl(app, repoUrl);
       if (entryPoint.url) {
         const note = await app.notes.find(app.context.noteUUID);
@@ -323,6 +332,9 @@
           newPluginBlock = await inlineImportsFromGithub(this, entryPoint, mainPluginBlock, functionTranslations, constantTranslations);
         }
         if (newPluginBlock) {
+          if (stripConsoleDebug) {
+            newPluginBlock = newPluginBlock.replace(/^\s*(console\.debug)/gm, `// $1`);
+          }
           if (newPluginBlock.length > this._constants.maxReplaceContentLength) {
             await app.alert(`The code block (length ${newPluginBlock.length}) is too long to replace (max size ${this._constants.maxReplaceContentLength}).Please manually replace the code block in the note, or email support@amplenote.com to request an increase in the size of replaceContent.`);
           } else {
@@ -330,6 +342,7 @@
 // Javascript updated ${(/* @__PURE__ */ new Date()).toLocaleString()} by Amplenote Plugin Builder from source code within "${repoUrl}"
 ${newPluginBlock}
 \`\`\``;
+            noteContent = await note.content();
             const replaceTarget = this._sectionFromHeadingText(this._constants.codeHeading, noteContent);
             if (replaceTarget) {
               await note.replaceContent(newPluginBlock, replaceTarget);
