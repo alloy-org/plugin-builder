@@ -298,7 +298,7 @@
           return await boundRun(app);
         }
       },
-      "Refresh w/o console.debug": {
+      "Refresh minus debug": {
         check: async function(app) {
           const boundCheck = this.insertText["Refresh"].check.bind(this);
           return await boundCheck(app);
