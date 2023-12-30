@@ -240,7 +240,6 @@
           if (endIndex !== -1 && startIndex !== -1) {
             const constantValue = constantAdjacentText.substring(startIndex, endIndex + 1);
             const constantName = constantDeclarationMatch.groups?.constantName;
-            console.log("Got constant value length", constantValue?.length, "for", constantName);
             constantTranslations.push({ constantName, constantValue });
           }
         }
@@ -331,14 +330,20 @@
 // Javascript updated ${(/* @__PURE__ */ new Date()).toLocaleString()} by Amplenote Plugin Builder from source code within "${repoUrl}"
 ${newPluginBlock}
 \`\`\``;
-            const replaceTarget = this._sectionFromHeadingText(this._constants.codeHeading);
-            await note.replaceContent(newPluginBlock, replaceTarget);
-            if (this.processingError) {
-              await app.alert(`\u26A0\uFE0F Plugin refresh from "${repoUrl}" completed, but errors were encountered:
+            const replaceTarget = this._sectionFromHeadingText(this._constants.codeHeading, noteContent);
+            if (replaceTarget) {
+              await note.replaceContent(newPluginBlock, replaceTarget);
+            }
+            if (!replaceTarget || this.processingError) {
+              if (replaceTarget) {
+                await app.alert(`\u26A0\uFE0F Plugin refresh from "${repoUrl}" completed, but errors were encountered:
 
 ` + this.processingError + `
 
 Please check your console for more details.`);
+              } else {
+                await app.alert(`\u26A0\uFE0F Plugin refresh from "${repoUrl}" failed. Could not find "${this._constants.codeHeading}" within note content.`);
+              }
             } else {
               await app.alert(`\u{1F389} Plugin refresh from "${repoUrl}" succeeded at ${(/* @__PURE__ */ new Date()).toLocaleString()}`);
             }
@@ -350,12 +355,27 @@ Please check your console for more details.`);
       }
     },
     //----------------------------------------------------------------------
-    _sectionFromHeadingText(headingText, { level = 1 } = {}) {
-      return { section: { heading: { text: headingText, level } } };
+    _sectionFromHeadingText(headingText, noteContent, { level = 1 } = {}) {
+      let headingTextInNote;
+      if (noteContent.includes(headingText)) {
+        headingTextInNote = headingText;
+      } else {
+        const headingIndex = noteContent.toLowerCase().indexOf(headingText.toLowerCase());
+        if (headingIndex > 0) {
+          headingTextInNote = noteContent.substring(headingIndex, headingIndex + headingText.length);
+        } else {
+          return null;
+        }
+      }
+      if (headingTextInNote) {
+        return { section: { heading: { text: headingTextInNote, level } } };
+      } else {
+        return null;
+      }
     },
     //----------------------------------------------------------------------
     async _isAbleToSync(app, noteContent) {
-      if (noteContent.includes(this._constants.codeHeading)) {
+      if (noteContent.toLowerCase().includes(this._constants.codeHeading.toLowerCase())) {
         return true;
       } else {
         if (/^```/m.test(noteContent)) {
