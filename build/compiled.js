@@ -87,7 +87,7 @@
         const controller = new AbortController();
         const signal = controller.signal;
         let headers = { "Content-Type": "text/plain" };
-        if (typeof global.window === "object") {
+        if (typeof global === "object") {
           headers["User-Agent"] = TEST_USER_AGENT;
           headers["Origin"] = "https://plugins.amplenote.com";
           console.log("Detected test environment. Off to fetch", apiURL.toString(), "with headers", headers);
