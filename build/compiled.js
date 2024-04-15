@@ -8,6 +8,7 @@
     "plugin.js",
     "index.js"
   ];
+  var TEST_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36";
 
   // lib/plugin-import-inliner.js
   function mainBlockFromEntryContent(content) {
@@ -77,18 +78,24 @@
   async function fetchWithRetry(url, { retries = 2, gracefulFail = false } = {}) {
     const timeoutSeconds = 30;
     let error;
-    const apiURL = new URL("https://plugins.amplenote.com/cors-proxy");
+    const apiURL = new URL(`https://plugins.amplenote.com/cors-proxy`);
+    url = url.replace("/github.com", "/raw.githubusercontent.com");
     apiURL.searchParams.set("apiurl", url);
     for (let i = 0; i < retries; i++) {
       try {
         let timeoutId;
         const controller = new AbortController();
         const signal = controller.signal;
+        let headers = { "Content-Type": "text/plain" };
+        if (typeof global.window === "object") {
+          headers["User-Agent"] = TEST_USER_AGENT;
+          headers["Origin"] = "https://plugins.amplenote.com";
+          console.log("Detected test environment. Off to fetch", apiURL.toString(), "with headers", headers);
+        }
         const fetchPromise = fetch(apiURL, {
           cache: "no-store",
           method: "GET",
-          headers: { "Content-Type": "text/plain" },
-          signal
+          headers
         });
         const timeoutPromise = new Promise(
           (_, reject) => timeoutId = setTimeout(() => {
@@ -96,10 +103,7 @@
             reject(new Error("Timeout"));
           }, timeoutSeconds * 1e3)
         );
-        let result = await Promise.race([
-          fetchPromise,
-          timeoutPromise
-        ]);
+        let result = await Promise.race([fetchPromise, timeoutPromise]);
         clearTimeout(timeoutId);
         return result;
       } catch (e) {
@@ -142,9 +146,6 @@
     let fileContent;
     const moduleFetchResponse = await fetchWithRetry(url, { retries: 1, gracefulFail: true });
     if (moduleFetchResponse?.ok && (fileContent = await moduleFetchResponse.text())) {
-      const json = JSON.parse(fileContent);
-      const lines = json.payload.blob.rawLines;
-      fileContent = lines.join("\n");
       return fileContent;
     } else {
       console.log("Failed to fetch", url, "with", moduleFetchResponse);
@@ -441,7 +442,7 @@ Or you can just deletethe code block and run the plugin again to re-create it wi
         let path = repoOrFileUrl.replace("https://github.com/", "");
         const components = path.split("/");
         if (components.length >= 3) {
-          url = `https://github.com/${components[0]}/${components[1]}/blob/${this._constants.defaultBranch}/${components.slice(2).join("/")}`;
+          url = `https://github.com/${components[0]}/${components[1]}/${this._constants.defaultBranch}/${components.slice(2).join("/")}`;
           content = await fileContentFromUrl(url);
           if (!content) {
             await app.alert(`Could not find a valid Github file at the entry point URL "${url}" (derived from "${repoOrFileUrl}")`);
@@ -452,7 +453,7 @@ Or you can just deletethe code block and run the plugin again to re-create it wi
         }
       } else {
         for (const entryLocation of this._constants.entryLocations) {
-          url = `${repoOrFileUrl}/blob/${this._constants.defaultBranch}/${entryLocation}`;
+          url = `${repoOrFileUrl}/${this._constants.defaultBranch}/${entryLocation}`;
           content = await fileContentFromUrl(url);
           if (content) {
             break;
