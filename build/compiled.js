@@ -12,14 +12,19 @@
 
   // lib/plugin-import-inliner.js
   function mainBlockFromEntryContent(content) {
-    if (!content) {
+    if (content) {
+      console.log("Found", content.length, "sized content to parse into block");
+    } else {
       console.error("No content found in block to import");
       return {};
     }
+    content = content.trim();
     if (content.split("\n")[0].includes("(() => {") && /}\)\(\);$/.test(content)) {
+      console.debug("Content matches esbuildBlock");
       const esbuildBlock = content.replace(/}\)\(\);$/, "  return plugin;\n})()");
       return { esbuildBlock };
     } else {
+      console.debug("No esbuildBlock match found. Parsing content as standard block");
       const mainPluginBlock = content.match(/=[\s]*(\{\n[\S\s]*\n\})/)?.at(1);
       return { mainPluginBlock };
     }
@@ -86,7 +91,7 @@
         let timeoutId;
         const controller = new AbortController();
         const signal = controller.signal;
-        let headers = { "Content-Type": "text/plain" };
+        let headers = { "Content-Type": "text/plain", "Cache-Control": "max-age=0" };
         if (typeof global === "object") {
           headers["User-Agent"] = TEST_USER_AGENT;
           headers["Origin"] = "https://plugins.amplenote.com";
